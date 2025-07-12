@@ -151,7 +151,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50/70 backdrop-blur-md py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex justify-center">
@@ -168,7 +168,7 @@ const Register = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="card">
+          <div className="card bg-white/80 backdrop-blur-md">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -281,7 +281,7 @@ const Register = () => {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card bg-white/80 backdrop-blur-md">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Skills & Availability</h3>
             
             <div className="space-y-4">

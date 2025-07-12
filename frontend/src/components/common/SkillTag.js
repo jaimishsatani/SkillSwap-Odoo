@@ -1,5 +1,7 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { SkillTagPropTypes } from '../../utils/propTypes';
 
 const SkillTag = ({ 
   skill, 
@@ -23,19 +25,44 @@ const SkillTag = ({
     }
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
+  const handleRemove = (e) => {
+    e.stopPropagation();
+    if (onRemove) {
+      onRemove(skill);
+    }
+  };
+
+  const handleRemoveKeyPress = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleRemove(e);
+    }
+  };
+
   return (
     <span 
-      className={`${baseClasses} ${typeClasses[type]} ${clickable ? 'cursor-pointer' : ''} ${className}`}
+      className={`${baseClasses} ${typeClasses[type]} ${clickable ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2' : ''} ${className}`}
       onClick={handleClick}
+      onKeyPress={clickable ? handleKeyPress : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      role={clickable ? 'button' : undefined}
+      aria-label={clickable ? `Select ${skill} skill` : `${skill} skill`}
     >
       {skill}
       {onRemove && (
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(skill);
-          }}
-          className="ml-1 hover:bg-black hover:bg-opacity-10 rounded-full p-0.5 transition-colors duration-200"
+          onClick={handleRemove}
+          onKeyPress={handleRemoveKeyPress}
+          className="ml-1 hover:bg-black hover:bg-opacity-10 rounded-full p-0.5 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          aria-label={`Remove ${skill} skill`}
+          tabIndex={0}
         >
           <XMarkIcon className="h-3 w-3" />
         </button>
@@ -43,5 +70,7 @@ const SkillTag = ({
     </span>
   );
 };
+
+SkillTag.propTypes = SkillTagPropTypes;
 
 export default SkillTag; 

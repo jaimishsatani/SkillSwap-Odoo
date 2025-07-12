@@ -35,7 +35,18 @@ export const AuthProvider = ({ children }) => {
           setUser(response.data);
         } catch (error) {
           console.error('Auth check failed:', error);
-          logout();
+          // Handle different types of errors
+          if (error.response?.status === 401) {
+            // Token is invalid, clear it
+            logout();
+          } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+            // Network error, don't logout but show warning
+            console.warn('Network error during auth check');
+            toast.error('Network error. Please check your connection.');
+          } else {
+            // Other errors
+            logout();
+          }
         }
       }
       setLoading(false);
@@ -56,7 +67,8 @@ export const AuthProvider = ({ children }) => {
       toast.success('Login successful!');
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
+      const message = error.response?.data?.message || 
+                     (error.code === 'NETWORK_ERROR' ? 'Network error. Please check your connection.' : 'Login failed');
       toast.error(message);
       return { success: false, error: message };
     }
@@ -74,7 +86,8 @@ export const AuthProvider = ({ children }) => {
       toast.success('Registration successful!');
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed';
+      const message = error.response?.data?.message || 
+                     (error.code === 'NETWORK_ERROR' ? 'Network error. Please check your connection.' : 'Registration failed');
       toast.error(message);
       return { success: false, error: message };
     }

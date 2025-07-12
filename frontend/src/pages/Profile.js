@@ -71,6 +71,20 @@ const Profile = () => {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (JPEG, PNG, or GIF)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('profilePhoto', file);
 
@@ -84,9 +98,12 @@ const Profile = () => {
       toast.success('Profile photo updated');
     } catch (error) {
       console.error('Error uploading photo:', error);
-      toast.error('Failed to upload photo');
+      const message = error.response?.data?.message || 'Failed to upload photo';
+      toast.error(message);
     } finally {
       setUploadingPhoto(false);
+      // Clean up the file input
+      event.target.value = '';
     }
   };
 
@@ -153,10 +170,10 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50/70 backdrop-blur-md">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
-        <div className="card mb-8">
+        <div className="card bg-white/80 backdrop-blur-md mb-8">
           <div className="flex items-start justify-between">
             <div className="flex items-center">
               <div className="relative">
@@ -218,7 +235,7 @@ const Profile = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Skills Offered */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Skills Offered</h2>
               {editing ? (
                 <div>
@@ -256,7 +273,7 @@ const Profile = () => {
             </div>
 
             {/* Skills Wanted */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Skills Wanted</h2>
               {editing ? (
                 <div>
@@ -294,7 +311,7 @@ const Profile = () => {
             </div>
 
             {/* Availability */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Availability</h2>
               {editing ? (
                 <div className="grid grid-cols-2 gap-2">
@@ -320,7 +337,7 @@ const Profile = () => {
 
             {/* Profile Visibility */}
             {isOwnProfile && (
-              <div className="card">
+              <div className="card bg-white/80 backdrop-blur-md">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Profile Visibility</h2>
                 {editing ? (
                   <div className="flex items-center">
@@ -363,7 +380,7 @@ const Profile = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Stats */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Stats</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
@@ -384,7 +401,7 @@ const Profile = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
               <div className="text-sm text-gray-600">
                 <p>No recent activity to show.</p>
