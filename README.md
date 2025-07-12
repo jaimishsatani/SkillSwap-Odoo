@@ -7,7 +7,6 @@ Build a collaborative, AI-integrated **Skill Swap Platform** where users can off
 
 ## 🧑‍🤝‍🧑 Team Name  
 **Team 1799**
-
 ---
 
 ## 👥 Team Members & Team Lead Details
