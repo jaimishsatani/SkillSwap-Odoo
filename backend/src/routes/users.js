@@ -1,13 +1,15 @@
 const express = require('express');
 const { body } = require('express-validator');
 const { authenticateToken, optionalAuth } = require('../middleware/auth');
+const { handleUpload } = require('../middleware/upload');
 const {
   getUsers,
   getUser,
   getMyProfile,
   addFeedback,
   getPopularSkills,
-  searchBySkills
+  searchBySkills,
+  uploadProfilePhoto
 } = require('../controllers/userController');
 
 const router = express.Router();
@@ -33,5 +35,6 @@ router.get('/:id', optionalAuth, getUser);
 // Protected routes
 router.get('/me/profile', authenticateToken, getMyProfile);
 router.post('/:id/feedback', authenticateToken, validateFeedback, addFeedback);
+router.post('/upload-photo', authenticateToken, handleUpload, uploadProfilePhoto);
 
 module.exports = router; 

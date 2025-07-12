@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const User = require('../models/User');
 
 // Generate JWT Token
@@ -221,7 +223,7 @@ const changePassword = async (req, res) => {
   }
 };
 
-// @desc    Forgot password (placeholder for future implementation)
+// @desc    Forgot password - send reset email
 // @route   POST /api/auth/forgot-password
 // @access  Public
 const forgotPassword = async (req, res) => {
@@ -236,11 +238,59 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // TODO: Implement email sending logic
-    // For now, just return success message
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Set token expiry (1 hour)
+    const resetPasswordExpires = Date.now() + 60 * 60 * 1000;
+
+    // Save token to user
+    user.resetPasswordToken = resetPasswordToken;
+    user.resetPasswordExpires = resetPasswordExpires;
+    await user.save();
+
+    // Create reset URL
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+
+    // Send email (for development, just log the URL)
+    if (process.env.NODE_ENV === 'production') {
+      // Configure email transporter
+      const transporter = nodemailer.createTransporter({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        secure: true,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: process.env.SMTP_FROM,
+        to: email,
+        subject: 'Password Reset Request',
+        html: `
+          <h1>Password Reset Request</h1>
+          <p>You requested a password reset. Click the link below to reset your password:</p>
+          <a href="${resetUrl}">Reset Password</a>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you didn't request this, please ignore this email.</p>
+        `,
+      };
+
+      await transporter.sendMail(mailOptions);
+    } else {
+      // For development, log the reset URL
+      console.log('Password reset URL:', resetUrl);
+    }
+
     res.json({
       success: true,
-      message: 'Password reset email sent (not implemented yet)'
+      message: 'Password reset email sent successfully'
     });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -251,11 +301,65 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+// @desc    Reset password using token
+// @route   POST /api/auth/reset-password/:token
+// @access  Public
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 6 characters'
+      });
+    }
+
+    // Hash the token to compare with stored token
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Find user with valid token
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired reset token'
+      });
+    }
+
+    // Update password and clear reset token
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset password'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
   updateProfile,
   changePassword,
-  forgotPassword
+  forgotPassword,
+  resetPassword
 }; 

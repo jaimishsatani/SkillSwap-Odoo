@@ -8,7 +8,8 @@ const {
   getMe,
   updateProfile,
   changePassword,
-  forgotPassword
+  forgotPassword,
+  resetPassword
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -94,6 +95,12 @@ const validateForgotPassword = [
     .withMessage('Please provide a valid email')
 ];
 
+const validateResetPassword = [
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters')
+];
+
 // Routes
 router.post('/register', validateRegistration, register);
 router.post('/login', validateLogin, login);
@@ -101,5 +108,6 @@ router.get('/me', authenticateToken, getMe);
 router.put('/profile', authenticateToken, handleUpload, validateProfileUpdate, updateProfile);
 router.put('/password', authenticateToken, validatePasswordChange, changePassword);
 router.post('/forgot-password', validateForgotPassword, forgotPassword);
+router.post('/reset-password/:token', validateResetPassword, resetPassword);
 
 module.exports = router; 

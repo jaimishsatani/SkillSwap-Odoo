@@ -277,11 +277,46 @@ const searchBySkills = async (req, res) => {
   }
 };
 
+// @desc    Upload profile photo
+// @route   POST /api/users/upload-photo
+// @access  Private
+const uploadProfilePhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+    const user = await User.findById(req.user._id);
+    // Delete old photo if exists
+    if (user.profilePhotoUrl) {
+      const oldFilename = user.profilePhotoUrl.split('/').pop();
+      const { deleteProfilePhoto } = require('../middleware/upload');
+      deleteProfilePhoto(oldFilename);
+    }
+    // Save new photo URL
+    user.profilePhotoUrl = `/uploads/${req.file.filename}`;
+    await user.save();
+    res.json({
+      success: true,
+      profilePhotoUrl: user.profilePhotoUrl
+    });
+  } catch (error) {
+    console.error('Upload profile photo error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload profile photo'
+    });
+  }
+};
+
 module.exports = {
   getUsers,
   getUser,
   getMyProfile,
   addFeedback,
   getPopularSkills,
-  searchBySkills
+  searchBySkills,
+  uploadProfilePhoto
 }; 
