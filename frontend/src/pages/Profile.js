@@ -71,6 +71,20 @@ const Profile = () => {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please select a valid image file (JPEG, PNG, or GIF)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('profilePhoto', file);
 
@@ -84,9 +98,12 @@ const Profile = () => {
       toast.success('Profile photo updated');
     } catch (error) {
       console.error('Error uploading photo:', error);
-      toast.error('Failed to upload photo');
+      const message = error.response?.data?.message || 'Failed to upload photo';
+      toast.error(message);
     } finally {
       setUploadingPhoto(false);
+      // Clean up the file input
+      event.target.value = '';
     }
   };
 
