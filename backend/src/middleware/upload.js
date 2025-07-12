@@ -59,24 +59,20 @@ const handleUpload = (req, res, next) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
-          success: false,
-          error: 'File too large. Maximum size is 5MB.'
+          message: 'File too large. Maximum size is 5MB.'
         });
       }
       if (err.code === 'LIMIT_UNEXPECTED_FILE') {
         return res.status(400).json({
-          success: false,
-          error: 'Unexpected file field'
+          message: 'Unexpected file field'
         });
       }
       return res.status(400).json({
-        success: false,
-        error: err.message
+        message: err.message
       });
     } else if (err) {
       return res.status(400).json({
-        success: false,
-        error: err.message
+        message: err.message
       });
     }
     // If multipart/form-data but no file, just continue (do not error)
@@ -97,6 +93,7 @@ const deleteProfilePhoto = (filename) => {
 
 module.exports = {
   handleUpload,
+  uploadProfilePhoto,
   deleteProfilePhoto,
   uploadsDir
 }; 

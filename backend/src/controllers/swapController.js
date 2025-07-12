@@ -1,196 +1,145 @@
 const SwapRequest = require('../models/SwapRequest');
 const User = require('../models/User');
 
-// @desc    Create a new swap request
-// @route   POST /api/swaps
+// @desc    Test swap functionality
+// @route   GET /api/swaps/test
 // @access  Private
-const createSwapRequest = async (req, res) => {
+const testSwapFunctionality = async (req, res) => {
   try {
-    const { toUserId, offeredSkill, requestedSkill, message } = req.body;
-
-    // Validate required fields
-    if (!toUserId || !offeredSkill || !requestedSkill || !message) {
-      return res.status(400).json({
-        success: false,
-        error: 'All fields are required'
-      });
-    }
-
-    // Check if user is trying to request from themselves
-    if (req.user._id.toString() === toUserId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot create swap request with yourself'
-      });
-    }
-
-    // Check if target user exists and is not banned
-    const targetUser = await User.findById(toUserId);
-    if (!targetUser) {
-      return res.status(404).json({
-        success: false,
-        error: 'Target user not found'
-      });
-    }
-
-    if (targetUser.isBanned) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot create swap request with banned user'
-      });
-    }
-
-    // Check if user has the offered skill
-    if (!req.user.skillsOffered.includes(offeredSkill)) {
-      return res.status(400).json({
-        success: false,
-        error: 'You do not offer this skill'
-      });
-    }
-
-    // Check if target user wants the requested skill
-    if (!targetUser.skillsWanted.includes(requestedSkill)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Target user does not want this skill'
-      });
-    }
-
-    // Check if there's already a pending request between these users
-    const existingRequest = await SwapRequest.findOne({
-      fromUser: req.user._id,
-      toUser: toUserId,
-      status: 'pending'
-    });
-
-    if (existingRequest) {
-      return res.status(400).json({
-        success: false,
-        error: 'You already have a pending request with this user'
-      });
-    }
-
-    // Create swap request
-    const swapRequest = await SwapRequest.create({
-      fromUser: req.user._id,
-      toUser: toUserId,
-      offeredSkill,
-      requestedSkill,
-      message
-    });
-
-    // Populate user data
-    await swapRequest.populate('fromUser', 'name profilePhotoUrl');
-    await swapRequest.populate('toUser', 'name profilePhotoUrl');
-
-    res.status(201).json({
-      success: true,
-      data: swapRequest
+    res.json({
+      message: 'Swap functionality is working!',
+      user: req.user._id,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Create swap request error:', error);
+    console.error('Test swap functionality error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to create swap request'
+      message: 'Test failed'
     });
   }
 };
 
 // @desc    Get user's swap requests
-// @route   GET /api/swaps
+// @route   GET /api/swaps/requests
 // @access  Private
-const getMySwaps = async (req, res) => {
+const getSwapRequests = async (req, res) => {
   try {
-    const { status, type } = req.query;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    let query = {};
-
-    // Filter by type (sent/received)
-    if (type === 'sent') {
-      query.fromUser = req.user._id;
-    } else if (type === 'received') {
-      query.toUser = req.user._id;
-    } else {
-      // Get all swaps for user
-      query.$or = [
-        { fromUser: req.user._id },
-        { toUser: req.user._id }
-      ];
-    }
-
-    // Filter by status
-    if (status && ['pending', 'accepted', 'rejected', 'cancelled'].includes(status)) {
-      query.status = status;
-    }
-
-    const swaps = await SwapRequest.find(query)
-      .populate('fromUser', 'name profilePhotoUrl')
-      .populate('toUser', 'name profilePhotoUrl')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await SwapRequest.countDocuments(query);
+    const userId = req.user._id;
+    
+    // Get received requests
+    const received = await SwapRequest.find({ to: userId })
+      .populate('from', 'name profilePhoto skillsOffered averageRating ratingCount')
+      .sort({ createdAt: -1 });
+    
+    // Get sent requests
+    const sent = await SwapRequest.find({ from: userId })
+      .populate('to', 'name profilePhoto skillsWanted averageRating ratingCount')
+      .sort({ createdAt: -1 });
 
     res.json({
-      success: true,
-      data: {
-        swaps,
-        pagination: {
-          current: page,
-          total: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1,
-          totalSwaps: total
-        }
-      }
+      received,
+      sent
     });
   } catch (error) {
-    console.error('Get my swaps error:', error);
+    console.error('Get swap requests error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch swap requests'
+      message: 'Failed to get swap requests'
     });
   }
 };
 
-// @desc    Get single swap request
-// @route   GET /api/swaps/:id
+// @desc    Create swap request
+// @route   POST /api/swaps
 // @access  Private
-const getSwapRequest = async (req, res) => {
+const createSwapRequest = async (req, res) => {
   try {
-    const swapRequest = await SwapRequest.findById(req.params.id)
-      .populate('fromUser', 'name profilePhotoUrl skillsOffered')
-      .populate('toUser', 'name profilePhotoUrl skillsWanted');
+    const { toUserId, offeredSkill, wantedSkill, message } = req.body;
+    const fromUserId = req.user._id;
 
-    if (!swapRequest) {
+    // Validate required fields
+    if (!toUserId || !offeredSkill || !wantedSkill) {
+      return res.status(400).json({
+        message: 'To user, offered skill, and wanted skill are required'
+      });
+    }
+
+    // Check if user is trying to request from themselves
+    if (fromUserId.toString() === toUserId) {
+      return res.status(400).json({
+        message: 'Cannot create swap request with yourself'
+      });
+    }
+
+    // Check if target user exists and is public
+    const targetUser = await User.findById(toUserId);
+    if (!targetUser) {
       return res.status(404).json({
-        success: false,
-        error: 'Swap request not found'
+        message: 'User not found'
       });
     }
 
-    // Check if user is involved in this swap
-    if (swapRequest.fromUser._id.toString() !== req.user._id.toString() &&
-        swapRequest.toUser._id.toString() !== req.user._id.toString()) {
+    if (!targetUser.isPublic) {
       return res.status(403).json({
-        success: false,
-        error: 'Access denied'
+        message: 'This user is not accepting swap requests'
       });
     }
 
-    res.json({
-      success: true,
-      data: swapRequest
+    if (targetUser.isBanned) {
+      return res.status(403).json({
+        message: 'This user has been banned'
+      });
+    }
+
+    // Check if there's already a pending request between these users
+    const existingRequest = await SwapRequest.findOne({
+      from: fromUserId,
+      to: toUserId,
+      status: 'pending'
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({
+        message: 'You already have a pending request with this user'
+      });
+    }
+
+    // Create swap request
+    const swapRequest = await SwapRequest.create({
+      from: fromUserId,
+      to: toUserId,
+      offeredSkill: offeredSkill.trim(),
+      wantedSkill: wantedSkill.trim(),
+      message: message ? message.trim() : '',
+      status: 'pending'
+    });
+
+    // Populate user data for response
+    await swapRequest.populate('from', 'name profilePhoto');
+    await swapRequest.populate('to', 'name profilePhoto');
+
+    res.status(201).json({
+      message: 'Swap request sent successfully',
+      swapRequest
     });
   } catch (error) {
-    console.error('Get swap request error:', error);
+    console.error('Create swap request error:', error);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => err.message)
+      });
+    }
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        message: 'Invalid user ID format'
+      });
+    }
+    
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch swap request'
+      message: 'Failed to create swap request'
     });
   }
 };
@@ -201,47 +150,39 @@ const getSwapRequest = async (req, res) => {
 const acceptSwapRequest = async (req, res) => {
   try {
     const swapRequest = await SwapRequest.findById(req.params.id);
-
+    
     if (!swapRequest) {
       return res.status(404).json({
-        success: false,
-        error: 'Swap request not found'
+        message: 'Swap request not found'
       });
     }
 
     // Check if user is the recipient
-    if (swapRequest.toUser.toString() !== req.user._id.toString()) {
+    if (swapRequest.to.toString() !== req.user._id.toString()) {
       return res.status(403).json({
-        success: false,
-        error: 'Only the recipient can accept the request'
+        message: 'Not authorized to accept this request'
       });
     }
 
-    // Check if request is pending
+    // Check if request is still pending
     if (swapRequest.status !== 'pending') {
       return res.status(400).json({
-        success: false,
-        error: 'Request is not pending'
+        message: 'Request is no longer pending'
       });
     }
 
     // Accept the request
     await swapRequest.accept();
 
-    // Populate user data
-    await swapRequest.populate('fromUser', 'name profilePhotoUrl');
-    await swapRequest.populate('toUser', 'name profilePhotoUrl');
+    // Populate user data for response
+    await swapRequest.populate('from', 'name profilePhoto');
+    await swapRequest.populate('to', 'name profilePhoto');
 
-    res.json({
-      success: true,
-      data: swapRequest,
-      message: 'Swap request accepted successfully'
-    });
+    res.json(swapRequest);
   } catch (error) {
     console.error('Accept swap request error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to accept swap request'
+      message: 'Failed to accept swap request'
     });
   }
 };
@@ -252,156 +193,210 @@ const acceptSwapRequest = async (req, res) => {
 const rejectSwapRequest = async (req, res) => {
   try {
     const swapRequest = await SwapRequest.findById(req.params.id);
-
+    
     if (!swapRequest) {
       return res.status(404).json({
-        success: false,
-        error: 'Swap request not found'
+        message: 'Swap request not found'
       });
     }
 
     // Check if user is the recipient
-    if (swapRequest.toUser.toString() !== req.user._id.toString()) {
+    if (swapRequest.to.toString() !== req.user._id.toString()) {
       return res.status(403).json({
-        success: false,
-        error: 'Only the recipient can reject the request'
+        message: 'Not authorized to reject this request'
       });
     }
 
-    // Check if request is pending
+    // Check if request is still pending
     if (swapRequest.status !== 'pending') {
       return res.status(400).json({
-        success: false,
-        error: 'Request is not pending'
+        message: 'Request is no longer pending'
       });
     }
 
     // Reject the request
     await swapRequest.reject();
 
-    // Populate user data
-    await swapRequest.populate('fromUser', 'name profilePhotoUrl');
-    await swapRequest.populate('toUser', 'name profilePhotoUrl');
+    // Populate user data for response
+    await swapRequest.populate('from', 'name profilePhoto');
+    await swapRequest.populate('to', 'name profilePhoto');
 
-    res.json({
-      success: true,
-      data: swapRequest,
-      message: 'Swap request rejected successfully'
-    });
+    res.json(swapRequest);
   } catch (error) {
     console.error('Reject swap request error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to reject swap request'
+      message: 'Failed to reject swap request'
     });
   }
 };
 
 // @desc    Cancel swap request
-// @route   PUT /api/swaps/:id/cancel
+// @route   DELETE /api/swaps/:id
 // @access  Private
 const cancelSwapRequest = async (req, res) => {
   try {
     const swapRequest = await SwapRequest.findById(req.params.id);
-
+    
     if (!swapRequest) {
       return res.status(404).json({
-        success: false,
-        error: 'Swap request not found'
+        message: 'Swap request not found'
       });
     }
 
     // Check if user is the sender
-    if (swapRequest.fromUser.toString() !== req.user._id.toString()) {
+    if (swapRequest.from.toString() !== req.user._id.toString()) {
       return res.status(403).json({
-        success: false,
-        error: 'Only the sender can cancel the request'
+        message: 'Not authorized to cancel this request'
       });
     }
 
-    // Check if request is pending
+    // Check if request is still pending
     if (swapRequest.status !== 'pending') {
       return res.status(400).json({
-        success: false,
-        error: 'Request is not pending'
+        message: 'Request is no longer pending'
       });
     }
 
     // Cancel the request
     await swapRequest.cancel();
 
-    // Populate user data
-    await swapRequest.populate('fromUser', 'name profilePhotoUrl');
-    await swapRequest.populate('toUser', 'name profilePhotoUrl');
-
     res.json({
-      success: true,
-      data: swapRequest,
       message: 'Swap request cancelled successfully'
     });
   } catch (error) {
     console.error('Cancel swap request error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to cancel swap request'
+      message: 'Failed to cancel swap request'
     });
   }
 };
 
-// @desc    Mark feedback as given
-// @route   PUT /api/swaps/:id/feedback-given
+// @desc    Complete swap request
+// @route   PUT /api/swaps/:id/complete
 // @access  Private
-const markFeedbackGiven = async (req, res) => {
+const completeSwapRequest = async (req, res) => {
   try {
     const swapRequest = await SwapRequest.findById(req.params.id);
-
+    
     if (!swapRequest) {
       return res.status(404).json({
-        success: false,
-        error: 'Swap request not found'
+        message: 'Swap request not found'
       });
     }
 
-    // Check if user is involved in this swap
-    if (swapRequest.fromUser.toString() !== req.user._id.toString() &&
-        swapRequest.toUser.toString() !== req.user._id.toString()) {
+    // Check if user is involved in the swap
+    if (swapRequest.from.toString() !== req.user._id.toString() && 
+        swapRequest.to.toString() !== req.user._id.toString()) {
       return res.status(403).json({
-        success: false,
-        error: 'Access denied'
+        message: 'Not authorized to complete this request'
       });
     }
 
-    // Check if swap is completed
+    // Check if request is accepted
     if (swapRequest.status !== 'accepted') {
       return res.status(400).json({
-        success: false,
-        error: 'Swap must be accepted to mark feedback'
+        message: 'Request must be accepted before completion'
       });
     }
 
-    // Mark feedback as given
-    await swapRequest.markFeedbackGiven();
+    // Complete the request
+    await swapRequest.complete();
 
-    res.json({
-      success: true,
-      data: swapRequest,
-      message: 'Feedback marked as given'
-    });
+    // Populate user data for response
+    await swapRequest.populate('from', 'name profilePhoto');
+    await swapRequest.populate('to', 'name profilePhoto');
+
+    res.json(swapRequest);
   } catch (error) {
-    console.error('Mark feedback given error:', error);
+    console.error('Complete swap request error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to mark feedback'
+      message: 'Failed to complete swap request'
+    });
+  }
+};
+
+// @desc    Get swap request by ID
+// @route   GET /api/swaps/:id
+// @access  Private
+const getSwapRequest = async (req, res) => {
+  try {
+    const swapRequest = await SwapRequest.findById(req.params.id)
+      .populate('from', 'name profilePhoto skillsOffered')
+      .populate('to', 'name profilePhoto skillsWanted');
+    
+    if (!swapRequest) {
+      return res.status(404).json({
+        message: 'Swap request not found'
+      });
+    }
+
+    // Check if user is involved in the swap
+    if (swapRequest.from._id.toString() !== req.user._id.toString() && 
+        swapRequest.to._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        message: 'Not authorized to view this request'
+      });
+    }
+
+    res.json(swapRequest);
+  } catch (error) {
+    console.error('Get swap request error:', error);
+    res.status(500).json({
+      message: 'Failed to get swap request'
+    });
+  }
+};
+
+// @desc    Get swap statistics
+// @route   GET /api/swaps/stats
+// @access  Private
+const getSwapStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    const stats = await SwapRequest.aggregate([
+      {
+        $match: {
+          $or: [{ from: userId }, { to: userId }]
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const statsMap = {
+      pending: 0,
+      accepted: 0,
+      rejected: 0,
+      cancelled: 0,
+      completed: 0
+    };
+
+    stats.forEach(stat => {
+      statsMap[stat._id] = stat.count;
+    });
+
+    res.json(statsMap);
+  } catch (error) {
+    console.error('Get swap stats error:', error);
+    res.status(500).json({
+      message: 'Failed to get swap statistics'
     });
   }
 };
 
 module.exports = {
+  testSwapFunctionality,
+  getSwapRequests,
   createSwapRequest,
-  getMySwaps,
-  getSwapRequest,
   acceptSwapRequest,
   rejectSwapRequest,
   cancelSwapRequest,
-  markFeedbackGiven
+  completeSwapRequest,
+  getSwapRequest,
+  getSwapStats
 }; 

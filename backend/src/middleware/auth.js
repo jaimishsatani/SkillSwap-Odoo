@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 // Middleware to verify JWT token
-const authenticateToken = async (req, res, next) => {
+const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -53,7 +53,7 @@ const authenticateToken = async (req, res, next) => {
 
 // Middleware to check if user is admin
 const requireAdmin = (req, res, next) => {
-  if (!req.user.isAdmin) {
+  if (req.user.role !== 'admin') {
     return res.status(403).json({ 
       message: 'Admin access required' 
     });
@@ -71,7 +71,7 @@ const requireOwnershipOrAdmin = (req, res, next) => {
     });
   }
 
-  if (req.user._id.toString() === resourceUserId || req.user.isAdmin) {
+  if (req.user._id.toString() === resourceUserId || req.user.role === 'admin') {
     return next();
   }
 
@@ -103,7 +103,7 @@ const optionalAuth = async (req, res, next) => {
 };
 
 module.exports = {
-  authenticateToken,
+  authenticate,
   requireAdmin,
   requireOwnershipOrAdmin,
   optionalAuth

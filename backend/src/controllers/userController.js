@@ -1,278 +1,75 @@
 const User = require('../models/User');
+const SwapRequest = require('../models/SwapRequest');
 
-// @desc    Get all public users with pagination and search
-// @route   GET /api/users
+// @desc    Get public users for exploration
+// @route   GET /api/users/explore
 // @access  Public
-const getUsers = async (req, res) => {
+const getPublicUsers = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search || '';
-    const skillFilter = req.query.skill || '';
-    const locationFilter = req.query.location || '';
-
-    const skip = (page - 1) * limit;
-
-    // Build query
-    let query = { 
-      profileStatus: 'public',
+    const users = await User.find({ 
+      isPublic: true, 
       isBanned: false 
-    };
+    })
+    .select('name profilePhoto location skillsOffered skillsWanted availability averageRating ratingCount')
+    .sort({ lastActive: -1 });
 
-    // Add search functionality
-    if (search) {
-      query.$text = { $search: search };
-    }
-
-    // Add skill filter
-    if (skillFilter) {
-      query.$or = [
-        { skillsOffered: { $regex: skillFilter, $options: 'i' } },
-        { skillsWanted: { $regex: skillFilter, $options: 'i' } }
-      ];
-    }
-
-    // Add location filter
-    if (locationFilter) {
-      query.location = { $regex: locationFilter, $options: 'i' };
-    }
-
-    // Execute query
-    const users = await User.find(query)
-      .select('name profilePhotoUrl location skillsOffered skillsWanted availability averageRating totalRatings lastActive')
-      .sort({ averageRating: -1, lastActive: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    // Get total count for pagination
-    const total = await User.countDocuments(query);
-
-    res.json({
-      success: true,
-      data: {
-        users,
-        pagination: {
-          current: page,
-          total: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1,
-          totalUsers: total
-        }
-      }
-    });
+    res.json(users);
   } catch (error) {
-    console.error('Get users error:', error);
+    console.error('Get public users error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch users'
+      message: 'Failed to fetch users'
     });
   }
 };
 
-// @desc    Get single user profile (public)
-// @route   GET /api/users/:id
-// @access  Public
-const getUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id)
-      .select('name profilePhotoUrl location skillsOffered skillsWanted availability averageRating totalRatings lastActive profileStatus')
-      .populate('feedbacks.userId', 'name profilePhotoUrl');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    // Check if profile is private and user is not the owner
-    if (user.profileStatus === 'private' && 
-        (!req.user || req.user._id.toString() !== req.params.id)) {
-      return res.status(403).json({
-        success: false,
-        error: 'Profile is private'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch user'
-    });
-  }
-};
-
-// @desc    Get current user's full profile
-// @route   GET /api/users/me/profile
+// @desc    Get user profile
+// @route   GET /api/users/profile
 // @access  Private
-const getMyProfile = async (req, res) => {
+const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .select('-password')
-      .populate('feedbacks.userId', 'name profilePhotoUrl');
-
-    res.json({
-      success: true,
-      data: user
-    });
+    const user = await User.findById(req.user._id).select('-password');
+    res.json(user);
   } catch (error) {
-    console.error('Get my profile error:', error);
+    console.error('Get profile error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch profile'
+      message: 'Failed to get profile'
     });
   }
 };
 
-// @desc    Add feedback/rating to user
-// @route   POST /api/users/:id/feedback
+// @desc    Update user profile
+// @route   PUT /api/users/profile
 // @access  Private
-const addFeedback = async (req, res) => {
+const updateProfile = async (req, res) => {
   try {
-    const { rating, message } = req.body;
-    const targetUserId = req.params.id;
+    const { 
+      name, 
+      location, 
+      skillsOffered, 
+      skillsWanted, 
+      availability, 
+      isPublic 
+    } = req.body;
+    
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (location !== undefined) updateData.location = location;
+    if (skillsOffered) updateData.skillsOffered = skillsOffered;
+    if (skillsWanted) updateData.skillsWanted = skillsWanted;
+    if (availability) updateData.availability = availability;
+    if (isPublic !== undefined) updateData.isPublic = isPublic;
 
-    // Validate rating
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({
-        success: false,
-        error: 'Rating must be between 1 and 5'
-      });
-    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
 
-    // Check if user is trying to rate themselves
-    if (req.user._id.toString() === targetUserId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot rate yourself'
-      });
-    }
-
-    // Check if target user exists
-    const targetUser = await User.findById(targetUserId);
-    if (!targetUser) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    // Add feedback
-    targetUser.addFeedback(req.user._id, rating, message);
-    await targetUser.save();
-
-    res.json({
-      success: true,
-      message: 'Feedback added successfully',
-      data: {
-        averageRating: targetUser.averageRating,
-        totalRatings: targetUser.totalRatings
-      }
-    });
+    res.json(user);
   } catch (error) {
-    console.error('Add feedback error:', error);
+    console.error('Update profile error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to add feedback'
-    });
-  }
-};
-
-// @desc    Get popular skills
-// @route   GET /api/users/skills/popular
-// @access  Public
-const getPopularSkills = async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit) || 10;
-
-    // Aggregate to get popular skills
-    const offeredSkills = await User.aggregate([
-      { $unwind: '$skillsOffered' },
-      { $group: { _id: '$skillsOffered', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: limit }
-    ]);
-
-    const wantedSkills = await User.aggregate([
-      { $unwind: '$skillsWanted' },
-      { $group: { _id: '$skillsWanted', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: limit }
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        offered: offeredSkills,
-        wanted: wantedSkills
-      }
-    });
-  } catch (error) {
-    console.error('Get popular skills error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch popular skills'
-    });
-  }
-};
-
-// @desc    Search users by skills
-// @route   GET /api/users/search/skills
-// @access  Public
-const searchBySkills = async (req, res) => {
-  try {
-    const { skill } = req.query;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    if (!skill) {
-      return res.status(400).json({
-        success: false,
-        error: 'Skill parameter is required'
-      });
-    }
-
-    const query = {
-      profileStatus: 'public',
-      isBanned: false,
-      $or: [
-        { skillsOffered: { $regex: skill, $options: 'i' } },
-        { skillsWanted: { $regex: skill, $options: 'i' } }
-      ]
-    };
-
-    const users = await User.find(query)
-      .select('name profilePhotoUrl location skillsOffered skillsWanted availability averageRating')
-      .sort({ averageRating: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await User.countDocuments(query);
-
-    res.json({
-      success: true,
-      data: {
-        users,
-        pagination: {
-          current: page,
-          total: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1,
-          totalUsers: total
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Search by skills error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to search users'
+      message: 'Failed to update profile'
     });
   }
 };
@@ -284,39 +81,161 @@ const uploadProfilePhoto = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
-        success: false,
-        error: 'No file uploaded'
+        message: 'No file uploaded'
       });
     }
-    const user = await User.findById(req.user._id);
-    // Delete old photo if exists
-    if (user.profilePhotoUrl) {
-      const oldFilename = user.profilePhotoUrl.split('/').pop();
-      const { deleteProfilePhoto } = require('../middleware/upload');
-      deleteProfilePhoto(oldFilename);
-    }
-    // Save new photo URL
-    user.profilePhotoUrl = `/uploads/${req.file.filename}`;
-    await user.save();
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    
+    // Update user profile photo
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { profilePhoto: fileUrl },
+      { new: true }
+    ).select('-password');
+
     res.json({
-      success: true,
-      profilePhotoUrl: user.profilePhotoUrl
+      profilePhoto: fileUrl,
+      user
     });
   } catch (error) {
-    console.error('Upload profile photo error:', error);
+    console.error('Upload photo error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to upload profile photo'
+      message: 'Failed to upload photo'
+    });
+  }
+};
+
+// @desc    Get user by ID (public profile)
+// @route   GET /api/users/:id
+// @access  Public
+const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('name profilePhoto location skillsOffered skillsWanted availability averageRating ratingCount createdAt')
+      .where({ isPublic: true, isBanned: false });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get user by ID error:', error);
+    res.status(500).json({
+      message: 'Failed to get user'
+    });
+  }
+};
+
+// @desc    Search users
+// @route   GET /api/users/search
+// @access  Public
+const searchUsers = async (req, res) => {
+  try {
+    const { q, skill, availability } = req.query;
+    
+    let query = { isPublic: true, isBanned: false };
+    
+    // Text search
+    if (q) {
+      query.$text = { $search: q };
+    }
+    
+    // Skill filter
+    if (skill) {
+      query.$or = [
+        { skillsOffered: skill },
+        { skillsWanted: skill }
+      ];
+    }
+    
+    // Availability filter
+    if (availability) {
+      query.availability = availability;
+    }
+
+    const users = await User.find(query)
+      .select('name profilePhoto location skillsOffered skillsWanted availability averageRating ratingCount')
+      .sort({ lastActive: -1 });
+
+    res.json(users);
+  } catch (error) {
+    console.error('Search users error:', error);
+    res.status(500).json({
+      message: 'Failed to search users'
+    });
+  }
+};
+
+// @desc    Get user statistics
+// @route   GET /api/users/stats
+// @access  Private
+const getUserStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get swap statistics
+    const totalSwaps = await SwapRequest.countDocuments({
+      $or: [{ from: userId }, { to: userId }]
+    });
+    
+    const completedSwaps = await SwapRequest.countDocuments({
+      $or: [{ from: userId }, { to: userId }],
+      status: 'completed'
+    });
+    
+    const pendingSwaps = await SwapRequest.countDocuments({
+      $or: [{ from: userId }, { to: userId }],
+      status: 'pending'
+    });
+
+    res.json({
+      totalSwaps,
+      completedSwaps,
+      pendingSwaps
+    });
+  } catch (error) {
+    console.error('Get user stats error:', error);
+    res.status(500).json({
+      message: 'Failed to get user statistics'
+    });
+  }
+};
+
+// @desc    Delete user account
+// @route   DELETE /api/users/profile
+// @access  Private
+const deleteAccount = async (req, res) => {
+  try {
+    // Delete user's swap requests
+    await SwapRequest.deleteMany({
+      $or: [{ from: req.user._id }, { to: req.user._id }]
+    });
+    
+    // Delete user
+    await User.findByIdAndDelete(req.user._id);
+
+    res.json({
+      message: 'Account deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({
+      message: 'Failed to delete account'
     });
   }
 };
 
 module.exports = {
-  getUsers,
-  getUser,
-  getMyProfile,
-  addFeedback,
-  getPopularSkills,
-  searchBySkills,
-  uploadProfilePhoto
+  getPublicUsers,
+  getProfile,
+  updateProfile,
+  uploadProfilePhoto,
+  getUserById,
+  searchUsers,
+  getUserStats,
+  deleteAccount
 }; 

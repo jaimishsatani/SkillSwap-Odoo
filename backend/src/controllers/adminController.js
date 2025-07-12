@@ -1,379 +1,272 @@
 const User = require('../models/User');
 const SwapRequest = require('../models/SwapRequest');
-const AdminLog = require('../models/AdminLog');
 
 // @desc    Get admin dashboard statistics
 // @route   GET /api/admin/stats
-// @access  Private/Admin
+// @access  Admin
 const getStats = async (req, res) => {
   try {
     // Get user statistics
     const totalUsers = await User.countDocuments();
-    const activeUsers = await User.countDocuments({ lastActive: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } });
-    const bannedUsers = await User.countDocuments({ isBanned: true });
+    const newUsersThisWeek = await User.countDocuments({
+      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+    });
 
     // Get swap statistics
     const totalSwaps = await SwapRequest.countDocuments();
+    const activeSwaps = await SwapRequest.countDocuments({ status: 'accepted' });
     const pendingSwaps = await SwapRequest.countDocuments({ status: 'pending' });
-    const completedSwaps = await SwapRequest.countDocuments({ status: 'accepted' });
+    const completedSwaps = await SwapRequest.countDocuments({ status: 'completed' });
+    const completedSwapsThisWeek = await SwapRequest.countDocuments({
+      status: 'completed',
+      completedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+    });
 
-    // Get popular skills
-    const popularOfferedSkills = await User.aggregate([
-      { $unwind: '$skillsOffered' },
-      { $group: { _id: '$skillsOffered', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 }
-    ]);
-
-    const popularWantedSkills = await User.aggregate([
-      { $unwind: '$skillsWanted' },
-      { $group: { _id: '$skillsWanted', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 }
-    ]);
-
-    // Get recent activity
-    const recentSwaps = await SwapRequest.find()
-      .populate('fromUser', 'name')
-      .populate('toUser', 'name')
-      .sort({ createdAt: -1 })
-      .limit(5);
+    // Calculate average rating
+    const usersWithRatings = await User.find({ averageRating: { $gt: 0 } });
+    const averageRating = usersWithRatings.length > 0 
+      ? usersWithRatings.reduce((sum, user) => sum + user.averageRating, 0) / usersWithRatings.length
+      : 0;
 
     res.json({
-      success: true,
-      data: {
-        users: {
-          total: totalUsers,
-          active: activeUsers,
-          banned: bannedUsers
-        },
-        swaps: {
-          total: totalSwaps,
-          pending: pendingSwaps,
-          completed: completedSwaps
-        },
-        skills: {
-          offered: popularOfferedSkills,
-          wanted: popularWantedSkills
-        },
-        recentActivity: recentSwaps
-      }
+      totalUsers,
+      newUsersThisWeek,
+      totalSwaps,
+      activeSwaps,
+      pendingSwaps,
+      completedSwaps,
+      completedSwapsThisWeek,
+      averageRating
     });
   } catch (error) {
     console.error('Get admin stats error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch statistics'
+      message: 'Failed to get admin statistics'
     });
   }
 };
 
-// @desc    Get all users (admin view)
+// @desc    Get all users for admin
 // @route   GET /api/admin/users
-// @access  Private/Admin
+// @access  Admin
 const getAllUsers = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const search = req.query.search || '';
-    const status = req.query.status || '';
+    const users = await User.find()
+      .select('name email profilePhoto location skillsOffered skillsWanted availability isPublic isBanned role averageRating ratingCount createdAt')
+      .sort({ createdAt: -1 });
 
-    const skip = (page - 1) * limit;
-
-    let query = {};
-
-    // Add search functionality
-    if (search) {
-      query.$text = { $search: search };
-    }
-
-    // Add status filter
-    if (status === 'banned') {
-      query.isBanned = true;
-    } else if (status === 'active') {
-      query.isBanned = false;
-    }
-
-    const users = await User.find(query)
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await User.countDocuments(query);
-
-    res.json({
-      success: true,
-      data: {
-        users,
-        pagination: {
-          current: page,
-          total: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1,
-          totalUsers: total
-        }
-      }
-    });
+    res.json(users);
   } catch (error) {
     console.error('Get all users error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch users'
+      message: 'Failed to get users'
     });
   }
 };
 
-// @desc    Ban/Unban user
-// @route   PUT /api/admin/users/:id/ban
-// @access  Private/Admin
-const toggleUserBan = async (req, res) => {
-  try {
-    const { reason } = req.body;
-    const userId = req.params.id;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    // Toggle ban status
-    user.isBanned = !user.isBanned;
-    await user.save();
-
-    // Log admin action
-    await AdminLog.createLog({
-      type: user.isBanned ? 'ban' : 'unban',
-      adminId: req.user._id,
-      targetUserId: userId,
-      description: user.isBanned ? `User banned: ${reason || 'No reason provided'}` : 'User unbanned',
-      details: { reason },
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({
-      success: true,
-      data: {
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          isBanned: user.isBanned
-        }
-      },
-      message: `User ${user.isBanned ? 'banned' : 'unbanned'} successfully`
-    });
-  } catch (error) {
-    console.error('Toggle user ban error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update user status'
-    });
-  }
-};
-
-// @desc    Delete user
-// @route   DELETE /api/admin/users/:id
-// @access  Private/Admin
-const deleteUser = async (req, res) => {
-  try {
-    const userId = req.params.id;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    // Check if user is admin
-    if (user.isAdmin) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot delete admin user'
-      });
-    }
-
-    // Delete user's swap requests
-    await SwapRequest.deleteMany({
-      $or: [
-        { fromUser: userId },
-        { toUser: userId }
-      ]
-    });
-
-    // Delete user
-    await User.findByIdAndDelete(userId);
-
-    // Log admin action
-    await AdminLog.createLog({
-      type: 'user_deletion',
-      adminId: req.user._id,
-      targetUserId: userId,
-      description: `User deleted: ${user.name} (${user.email})`,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({
-      success: true,
-      message: 'User deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete user error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to delete user'
-    });
-  }
-};
-
-// @desc    Get all swap requests (admin view)
+// @desc    Get all swaps for admin
 // @route   GET /api/admin/swaps
-// @access  Private/Admin
+// @access  Admin
 const getAllSwaps = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const status = req.query.status || '';
+    const swaps = await SwapRequest.find()
+      .populate('from', 'name profilePhoto')
+      .populate('to', 'name profilePhoto')
+      .sort({ createdAt: -1 });
 
-    const skip = (page - 1) * limit;
-
-    let query = {};
-
-    // Add status filter
-    if (status && ['pending', 'accepted', 'rejected', 'cancelled'].includes(status)) {
-      query.status = status;
-    }
-
-    const swaps = await SwapRequest.find(query)
-      .populate('fromUser', 'name email')
-      .populate('toUser', 'name email')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await SwapRequest.countDocuments(query);
-
-    res.json({
-      success: true,
-      data: {
-        swaps,
-        pagination: {
-          current: page,
-          total: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1,
-          totalSwaps: total
-        }
-      }
-    });
+    res.json(swaps);
   } catch (error) {
     console.error('Get all swaps error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch swaps'
+      message: 'Failed to get swaps'
     });
   }
 };
 
-// @desc    Get admin logs
-// @route   GET /api/admin/logs
-// @access  Private/Admin
-const getAdminLogs = async (req, res) => {
+// @desc    Ban user
+// @route   PUT /api/admin/users/:id/ban
+// @access  Admin
+const banUser = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const type = req.query.type || '';
-
-    const skip = (page - 1) * limit;
-
-    let query = {};
-
-    // Add type filter
-    if (type && ['ban', 'unban', 'announcement', 'flag', 'skill_moderation', 'user_deletion'].includes(type)) {
-      query.type = type;
-    }
-
-    const logs = await AdminLog.find(query)
-      .populate('adminId', 'name email')
-      .populate('targetUserId', 'name email')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await AdminLog.countDocuments(query);
-
-    res.json({
-      success: true,
-      data: {
-        logs,
-        pagination: {
-          current: page,
-          total: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1,
-          totalLogs: total
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Get admin logs error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch admin logs'
-    });
-  }
-};
-
-// @desc    Create announcement
-// @route   POST /api/admin/announcements
-// @access  Private/Admin
-const createAnnouncement = async (req, res) => {
-  try {
-    const { title, message } = req.body;
-
-    if (!title || !message) {
-      return res.status(400).json({
-        success: false,
-        error: 'Title and message are required'
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
       });
     }
 
-    // Log admin action
-    await AdminLog.createLog({
-      type: 'announcement',
-      adminId: req.user._id,
-      description: `Announcement: ${title}`,
-      details: { title, message },
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
+    // Prevent banning admins
+    if (user.role === 'admin') {
+      return res.status(400).json({
+        message: 'Cannot ban admin users'
+      });
+    }
+
+    user.isBanned = true;
+    await user.save();
 
     res.json({
-      success: true,
-      message: 'Announcement created successfully'
+      message: 'User banned successfully',
+      user
     });
   } catch (error) {
-    console.error('Create announcement error:', error);
+    console.error('Ban user error:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to create announcement'
+      message: 'Failed to ban user'
     });
   }
+};
+
+// @desc    Unban user
+// @route   PUT /api/admin/users/:id/unban
+// @access  Admin
+const unbanUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    user.isBanned = false;
+    await user.save();
+
+    res.json({
+      message: 'User unbanned successfully',
+      user
+    });
+  } catch (error) {
+    console.error('Unban user error:', error);
+    res.status(500).json({
+      message: 'Failed to unban user'
+    });
+  }
+};
+
+// @desc    Reject swap request
+// @route   PUT /api/admin/swaps/:id/reject
+// @access  Admin
+const rejectSwap = async (req, res) => {
+  try {
+    const swap = await SwapRequest.findById(req.params.id);
+    
+    if (!swap) {
+      return res.status(404).json({
+        message: 'Swap request not found'
+      });
+    }
+
+    if (swap.status !== 'pending') {
+      return res.status(400).json({
+        message: 'Only pending swaps can be rejected'
+      });
+    }
+
+    swap.status = 'rejected';
+    await swap.save();
+
+    res.json({
+      message: 'Swap rejected successfully',
+      swap
+    });
+  } catch (error) {
+    console.error('Reject swap error:', error);
+    res.status(500).json({
+      message: 'Failed to reject swap'
+    });
+  }
+};
+
+// @desc    Download reports
+// @route   GET /api/admin/reports/:type
+// @access  Admin
+const downloadReport = async (req, res) => {
+  try {
+    const { type } = req.params;
+    
+    let data = [];
+    let filename = '';
+    
+    switch (type) {
+      case 'users':
+        data = await User.find()
+          .select('name email location skillsOffered skillsWanted availability isPublic isBanned role averageRating ratingCount createdAt')
+          .lean();
+        filename = 'users-report.csv';
+        break;
+        
+      case 'swaps':
+        data = await SwapRequest.find()
+          .populate('from', 'name email')
+          .populate('to', 'name email')
+          .lean();
+        filename = 'swaps-report.csv';
+        break;
+        
+      case 'feedback':
+        data = await User.find({ 'feedbacks.0': { $exists: true } })
+          .select('name email feedbacks')
+          .lean();
+        filename = 'feedback-report.csv';
+        break;
+        
+      case 'platform':
+        const stats = await getStats(req, res);
+        data = [stats];
+        filename = 'platform-overview.csv';
+        break;
+        
+      default:
+      return res.status(400).json({
+          message: 'Invalid report type'
+        });
+    }
+    
+    // Convert to CSV format
+    const csv = convertToCSV(data);
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+    
+  } catch (error) {
+    console.error('Download report error:', error);
+    res.status(500).json({
+      message: 'Failed to download report'
+    });
+  }
+};
+
+// Helper function to convert data to CSV
+const convertToCSV = (data) => {
+  if (data.length === 0) return '';
+  
+  const headers = Object.keys(data[0]);
+  const csvRows = [headers.join(',')];
+  
+  for (const row of data) {
+    const values = headers.map(header => {
+      const value = row[header];
+      if (typeof value === 'object') {
+        return JSON.stringify(value);
+      }
+      return value || '';
+    });
+    csvRows.push(values.join(','));
+  }
+  
+  return csvRows.join('\n');
 };
 
 module.exports = {
   getStats,
   getAllUsers,
-  toggleUserBan,
-  deleteUser,
   getAllSwaps,
-  getAdminLogs,
-  createAnnouncement
+  banUser,
+  unbanUser,
+  rejectSwap,
+  downloadReport
 }; 

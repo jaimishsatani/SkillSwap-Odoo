@@ -1,50 +1,54 @@
 const express = require('express');
-const { body } = require('express-validator');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 const {
   getStats,
   getAllUsers,
-  toggleUserBan,
-  deleteUser,
   getAllSwaps,
-  getAdminLogs,
-  createAnnouncement
+  banUser,
+  unbanUser,
+  rejectSwap,
+  downloadReport
 } = require('../controllers/adminController');
 
 const router = express.Router();
 
-// All routes require authentication and admin privileges
-router.use(authenticateToken);
+// All admin routes require authentication and admin role
+router.use(authenticate);
 router.use(requireAdmin);
 
-// Validation middleware
-const validateAnnouncement = [
-  body('title')
-    .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Title must be between 1 and 100 characters'),
-  body('message')
-    .trim()
-    .isLength({ min: 1, max: 1000 })
-    .withMessage('Message must be between 1 and 1000 characters')
-];
-
-const validateBanUser = [
-  body('reason')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Reason cannot exceed 500 characters')
-];
-
-// Routes
+// @route   GET /api/admin/stats
+// @desc    Get admin dashboard statistics
+// @access  Admin
 router.get('/stats', getStats);
-router.get('/users', getAllUsers);
-router.get('/swaps', getAllSwaps);
-router.get('/logs', getAdminLogs);
 
-router.put('/users/:id/ban', validateBanUser, toggleUserBan);
-router.delete('/users/:id', deleteUser);
-router.post('/announcements', validateAnnouncement, createAnnouncement);
+// @route   GET /api/admin/users
+// @desc    Get all users for admin
+// @access  Admin
+router.get('/users', getAllUsers);
+
+// @route   GET /api/admin/swaps
+// @desc    Get all swaps for admin
+// @access  Admin
+router.get('/swaps', getAllSwaps);
+
+// @route   PUT /api/admin/users/:id/ban
+// @desc    Ban user
+// @access  Admin
+router.put('/users/:id/ban', banUser);
+
+// @route   PUT /api/admin/users/:id/unban
+// @desc    Unban user
+// @access  Admin
+router.put('/users/:id/unban', unbanUser);
+
+// @route   PUT /api/admin/swaps/:id/reject
+// @desc    Reject swap request
+// @access  Admin
+router.put('/swaps/:id/reject', rejectSwap);
+
+// @route   GET /api/admin/reports/:type
+// @desc    Download reports
+// @access  Admin
+router.get('/reports/:type', downloadReport);
 
 module.exports = router; 

@@ -43,7 +43,7 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters']
   },
-  profilePhotoUrl: {
+  profilePhoto: {
     type: String,
     default: null
   },
@@ -62,23 +62,23 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [50, 'Skill name cannot be more than 50 characters']
   }],
-  availability: {
+  availability: [{
     type: String,
-    trim: true,
-    maxlength: [200, 'Availability description cannot be more than 200 characters']
-  },
-  profileStatus: {
-    type: String,
-    enum: ['public', 'private'],
-    default: 'public'
+    enum: ['Weekdays', 'Weekends', 'Evenings', 'Mornings', 'Flexible'],
+    default: []
+  }],
+  isPublic: {
+    type: Boolean,
+    default: true
   },
   isBanned: {
     type: Boolean,
     default: false
   },
-  isAdmin: {
-    type: Boolean,
-    default: false
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
   },
   averageRating: {
     type: Number,
@@ -86,7 +86,7 @@ const userSchema = new mongoose.Schema({
     min: 0,
     max: 5
   },
-  totalRatings: {
+  ratingCount: {
     type: Number,
     default: 0
   },
@@ -137,13 +137,13 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 userSchema.methods.updateAverageRating = function() {
   if (this.feedbacks.length === 0) {
     this.averageRating = 0;
-    this.totalRatings = 0;
+    this.ratingCount = 0;
     return;
   }
 
   const totalRating = this.feedbacks.reduce((sum, feedback) => sum + feedback.rating, 0);
   this.averageRating = Math.round((totalRating / this.feedbacks.length) * 10) / 10;
-  this.totalRatings = this.feedbacks.length;
+  this.ratingCount = this.feedbacks.length;
 };
 
 // Method to add feedback
@@ -165,13 +165,13 @@ userSchema.virtual('publicProfile').get(function() {
   return {
     _id: this._id,
     name: this.name,
-    profilePhotoUrl: this.profilePhotoUrl,
+    profilePhoto: this.profilePhoto,
     location: this.location,
     skillsOffered: this.skillsOffered,
     skillsWanted: this.skillsWanted,
     availability: this.availability,
     averageRating: this.averageRating,
-    totalRatings: this.totalRatings,
+    ratingCount: this.ratingCount,
     lastActive: this.lastActive
   };
 });

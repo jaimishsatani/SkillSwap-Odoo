@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const swapRequestSchema = new mongoose.Schema({
-  fromUser: {
+  from: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  toUser: {
+  to: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -17,21 +17,20 @@ const swapRequestSchema = new mongoose.Schema({
     trim: true,
     maxlength: [50, 'Skill name cannot be more than 50 characters']
   },
-  requestedSkill: {
+  wantedSkill: {
     type: String,
-    required: [true, 'Requested skill is required'],
+    required: [true, 'Wanted skill is required'],
     trim: true,
     maxlength: [50, 'Skill name cannot be more than 50 characters']
   },
   message: {
     type: String,
-    required: [true, 'Message is required'],
     trim: true,
     maxlength: [500, 'Message cannot be more than 500 characters']
   },
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'rejected', 'cancelled'],
+    enum: ['pending', 'accepted', 'rejected', 'cancelled', 'completed'],
     default: 'pending'
   },
   completedAt: {
@@ -47,21 +46,21 @@ const swapRequestSchema = new mongoose.Schema({
 });
 
 // Index for efficient queries
-swapRequestSchema.index({ fromUser: 1, status: 1 });
-swapRequestSchema.index({ toUser: 1, status: 1 });
+swapRequestSchema.index({ from: 1, status: 1 });
+swapRequestSchema.index({ to: 1, status: 1 });
 swapRequestSchema.index({ status: 1, createdAt: -1 });
 
 // Virtual for populated data
 swapRequestSchema.virtual('fromUserData', {
   ref: 'User',
-  localField: 'fromUser',
+  localField: 'from',
   foreignField: '_id',
   justOne: true
 });
 
 swapRequestSchema.virtual('toUserData', {
   ref: 'User',
-  localField: 'toUser',
+  localField: 'to',
   foreignField: '_id',
   justOne: true
 });
@@ -69,7 +68,6 @@ swapRequestSchema.virtual('toUserData', {
 // Method to accept swap request
 swapRequestSchema.methods.accept = function() {
   this.status = 'accepted';
-  this.completedAt = new Date();
   return this.save();
 };
 
@@ -85,6 +83,13 @@ swapRequestSchema.methods.cancel = function() {
   return this.save();
 };
 
+// Method to complete swap request
+swapRequestSchema.methods.complete = function() {
+  this.status = 'completed';
+  this.completedAt = new Date();
+  return this.save();
+};
+
 // Method to mark feedback as given
 swapRequestSchema.methods.markFeedbackGiven = function() {
   this.feedbackGiven = true;
@@ -95,8 +100,8 @@ swapRequestSchema.methods.markFeedbackGiven = function() {
 swapRequestSchema.statics.getUserSwaps = function(userId, status = null) {
   const query = {
     $or: [
-      { fromUser: userId },
-      { toUser: userId }
+      { from: userId },
+      { to: userId }
     ]
   };
   
@@ -105,22 +110,22 @@ swapRequestSchema.statics.getUserSwaps = function(userId, status = null) {
   }
   
   return this.find(query)
-    .populate('fromUser', 'name profilePhotoUrl')
-    .populate('toUser', 'name profilePhotoUrl')
+    .populate('from', 'name profilePhoto')
+    .populate('to', 'name profilePhoto')
     .sort({ createdAt: -1 });
 };
 
 // Static method to get pending requests for a user
 swapRequestSchema.statics.getPendingForUser = function(userId) {
-  return this.find({ toUser: userId, status: 'pending' })
-    .populate('fromUser', 'name profilePhotoUrl skillsOffered')
+  return this.find({ to: userId, status: 'pending' })
+    .populate('from', 'name profilePhoto skillsOffered')
     .sort({ createdAt: -1 });
 };
 
 // Static method to get sent requests by a user
 swapRequestSchema.statics.getSentByUser = function(userId) {
-  return this.find({ fromUser: userId })
-    .populate('toUser', 'name profilePhotoUrl skillsWanted')
+  return this.find({ from: userId })
+    .populate('to', 'name profilePhoto skillsWanted')
     .sort({ createdAt: -1 });
 };
 
