@@ -14,6 +14,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import SkillTag from '../components/common/SkillTag';
+import SkillSwapRequestModal from '../components/common/SkillSwapRequestModal';
 
 const Explore = () => {
   const { user, isAuthenticated } = useAuth();
@@ -23,6 +24,8 @@ const Explore = () => {
   const [selectedSkill, setSelectedSkill] = useState('');
   const [selectedAvailability, setSelectedAvailability] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
+  const [swapTargetUser, setSwapTargetUser] = useState(null);
 
   const availabilityOptions = [
     'Weekdays',
@@ -64,14 +67,14 @@ const Explore = () => {
     return matchesSearch && matchesSkill && matchesAvailability;
   });
 
-  const handleSwapRequest = async (targetUserId) => {
+  const handleSwapRequest = (targetUserId) => {
     if (!isAuthenticated) {
       toast.error('Please login to send swap requests');
       return;
     }
-
-    // This would typically open a modal or navigate to a swap request form
-    toast.success('Swap request feature coming soon!');
+    const foundUser = users.find(u => u._id === targetUserId);
+    setSwapTargetUser(foundUser);
+    setSwapModalOpen(true);
   };
 
   const getAllSkills = () => {
@@ -269,6 +272,13 @@ const Explore = () => {
             ))}
           </div>
         )}
+        <SkillSwapRequestModal
+          isOpen={swapModalOpen}
+          onClose={() => setSwapModalOpen(false)}
+          targetUser={swapTargetUser}
+          currentUser={user}
+          onRequestSent={() => toast.success('Swap request sent!')}
+        />
       </div>
     </div>
   );

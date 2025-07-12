@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import SkillTag from '../components/common/SkillTag';
 import StarRating from '../components/common/StarRating';
+import SkillSwapRequestModal from '../components/common/SkillSwapRequestModal';
 
 const Profile = () => {
   const { userId } = useParams();
@@ -27,6 +28,7 @@ const Profile = () => {
   const [skillInput, setSkillInput] = useState('');
   const [wantedSkillInput, setWantedSkillInput] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
 
   const isOwnProfile = !userId || userId === currentUser?._id;
 
@@ -171,7 +173,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/70 backdrop-blur-md">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
         <div className="card bg-white/80 backdrop-blur-md mb-8">
           <div className="flex items-start justify-between">
@@ -229,6 +231,18 @@ const Profile = () => {
             )}
           </div>
         </div>
+
+        {/* Show Request Swap button if viewing another user's public profile */}
+        {!isOwnProfile && user && user.isPublic && (
+          <div className="mb-6 flex justify-end">
+            <button
+              className="btn-primary"
+              onClick={() => setSwapModalOpen(true)}
+            >
+              Request Swap
+            </button>
+          </div>
+        )}
 
         {/* Profile Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -409,6 +423,13 @@ const Profile = () => {
             </div>
           </div>
         </div>
+        <SkillSwapRequestModal
+          isOpen={swapModalOpen}
+          onClose={() => setSwapModalOpen(false)}
+          targetUser={user}
+          currentUser={currentUser}
+          onRequestSent={() => toast.success('Swap request sent!')}
+        />
       </div>
     </div>
   );
