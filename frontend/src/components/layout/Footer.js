@@ -100,7 +100,7 @@ const Footer = () => {
 
         <div className="mt-8 pt-8 border-t border-gray-200">
           <p className="text-center text-gray-500 text-sm">
-            © 2024 Skill Swap Platform. All rights reserved.
+            © 2026 Skill Swap Platform. All rights reserved.
           </p>
         </div>
       </div>
