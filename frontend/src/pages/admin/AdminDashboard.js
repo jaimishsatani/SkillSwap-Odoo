@@ -110,7 +110,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50/70 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -122,7 +122,7 @@ const AdminDashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="card">
+          <div className="card bg-white/80 backdrop-blur-md">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <UsersIcon className="h-8 w-8 text-primary-600" />
@@ -134,7 +134,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card bg-white/80 backdrop-blur-md">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <HandThumbUpIcon className="h-8 w-8 text-green-600" />
@@ -146,7 +146,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card bg-white/80 backdrop-blur-md">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <ExclamationTriangleIcon className="h-8 w-8 text-yellow-600" />
@@ -158,7 +158,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card bg-white/80 backdrop-blur-md">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <ChartBarIcon className="h-8 w-8 text-purple-600" />
@@ -202,7 +202,7 @@ const AdminDashboard = () => {
         <div className="space-y-6">
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="card">
+              <div className="card bg-white/80 backdrop-blur-md">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
@@ -220,7 +220,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              <div className="card">
+              <div className="card bg-white/80 backdrop-blur-md">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
                   <button
@@ -243,7 +243,7 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === 'users' && (
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h3 className="text-lg font-medium text-gray-900 mb-4">User Management</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -317,7 +317,7 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === 'swaps' && (
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Swap Monitoring</h3>
               <div className="space-y-4">
                 {swaps.map((swap) => (
@@ -362,7 +362,7 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === 'reports' && (
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Download Reports</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button

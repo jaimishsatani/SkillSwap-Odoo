@@ -41,45 +41,65 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar />
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/explore" element={<Explore />} />
-            <Route 
-              path="/profile" 
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/swap-requests" 
-              element={
-                <ProtectedRoute>
-                  <SwapRequests />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedRoute adminOnly>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+      <div className="relative min-h-screen flex flex-col overflow-hidden">
+        {/* Background image */}
+        <div
+          className="absolute inset-0 bg-center bg-cover opacity-20 z-0"
+          style={{
+            backgroundImage: "url('/bg.png')",
+            filter: 'blur(2px)',
+          }}
+        ></div>
+
+        {/* Navbar always on top */}
+        <div className="relative z-10">
+          <Navbar />
+        </div>
+
+        {/* Main content with frosted glass */}
+        <main className="relative z-10 flex-1 flex flex-col px-4 md:px-8 py-6">
+          <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-7xl mx-auto flex-1 flex flex-col p-4 md:p-8">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/explore" element={<Explore />} />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/swap-requests"
+                element={
+                  <ProtectedRoute>
+                    <SwapRequests />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
         </main>
-        <Footer />
+
+        {/* Footer always on bottom */}
+        <div className="relative z-10">
+          <Footer />
+        </div>
       </div>
     </ErrorBoundary>
   );
 }
 
-export default App; 
+export default App;

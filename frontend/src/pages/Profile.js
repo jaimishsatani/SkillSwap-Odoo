@@ -170,10 +170,10 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50/70 backdrop-blur-md">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
-        <div className="card mb-8">
+        <div className="card bg-white/80 backdrop-blur-md mb-8">
           <div className="flex items-start justify-between">
             <div className="flex items-center">
               <div className="relative">
@@ -235,7 +235,7 @@ const Profile = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Skills Offered */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Skills Offered</h2>
               {editing ? (
                 <div>
@@ -273,7 +273,7 @@ const Profile = () => {
             </div>
 
             {/* Skills Wanted */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Skills Wanted</h2>
               {editing ? (
                 <div>
@@ -311,7 +311,7 @@ const Profile = () => {
             </div>
 
             {/* Availability */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Availability</h2>
               {editing ? (
                 <div className="grid grid-cols-2 gap-2">
@@ -337,7 +337,7 @@ const Profile = () => {
 
             {/* Profile Visibility */}
             {isOwnProfile && (
-              <div className="card">
+              <div className="card bg-white/80 backdrop-blur-md">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Profile Visibility</h2>
                 {editing ? (
                   <div className="flex items-center">
@@ -380,7 +380,7 @@ const Profile = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Stats */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Stats</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
@@ -401,7 +401,7 @@ const Profile = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="card">
+            <div className="card bg-white/80 backdrop-blur-md">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
               <div className="text-sm text-gray-600">
                 <p>No recent activity to show.</p>

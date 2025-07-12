@@ -96,7 +96,7 @@ const SwapRequests = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50/70 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -149,7 +149,7 @@ const SwapRequests = () => {
               </div>
             ) : (
               requests.received.map((request) => (
-                <div key={request._id} className="card">
+                <div key={request._id} className="card bg-white/80 backdrop-blur-md">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4">
                       <img
@@ -209,7 +209,7 @@ const SwapRequests = () => {
               </div>
             ) : (
               requests.sent.map((request) => (
-                <div key={request._id} className="card">
+                <div key={request._id} className="card bg-white/80 backdrop-blur-md">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4">
                       <img

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  UserGroupIcon, 
-  AcademicCapIcon, 
-  HandThumbUpIcon, 
+import {
+  UserGroupIcon,
+  AcademicCapIcon,
+  HandThumbUpIcon,
   SparklesIcon,
   ArrowRightIcon,
   CheckCircleIcon
@@ -44,12 +44,12 @@ const Home = () => {
   ];
 
   return (
-    <div className="bg-white">
+    <div>
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
-            <main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
+        <div>
+          <div className="relative z-10 pb-8 bg-white/70 backdrop-blur-md sm:pb-16 md:pb-20 lg:w-full lg:pb-28 xl:pb-32">
+            <main className="mt-10 px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
               <div className="sm:text-center lg:text-left">
                 <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
                   <span className="block">Learn Skills</span>
@@ -110,8 +110,8 @@ const Home = () => {
       </div>
 
       {/* Stats Section */}
-      <div className="bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-gray-50/70 backdrop-blur-md py-12">
+        <div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
@@ -124,8 +124,8 @@ const Home = () => {
       </div>
 
       {/* Features Section */}
-      <div className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="py-16 bg-white/70 backdrop-blur-md">
+        <div>
           <div className="text-center">
             <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
               Why Choose Skill Swap?
@@ -152,8 +152,8 @@ const Home = () => {
       </div>
 
       {/* How It Works Section */}
-      <div className="bg-gray-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-gray-50/70 backdrop-blur-md py-16">
+        <div>
           <div className="text-center">
             <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
               How It Works
@@ -200,8 +200,8 @@ const Home = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-primary-600">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
+      <div className="bg-primary-600/90 backdrop-blur-md">
+        <div className="py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
           <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             <span className="block">Ready to start learning?</span>
             <span className="block text-primary-200">Join our community today.</span>
