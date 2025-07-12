@@ -1,4 +1,48 @@
-# Skill Swap Platform
+# 🔄 Skill Swap Platform
+
+## 🧩 Problem Statement  
+Build a collaborative, AI-integrated **Skill Swap Platform** where users can offer and request skills (e.g., graphic design for web development), send swap requests, chat, and maintain verified profiles. Only authenticated users can interact. The system includes profile visibility settings and real-time notifications.
+
+---
+
+## 🧑‍🤝‍🧑 Team Name  
+**Team 1799**
+
+---
+
+## 👥 Team Members & Team Lead Details
+
+### 👨‍💼 Team Leader  
+- **Name**: Jaimish Satani  
+- **Email**: jaimishsatani@gmail.com  
+- **Phone**: 9712422126  
+
+### 👨‍💻 Reviewer  
+- **Name**: Jitendra Kumar Prajapat (jipr)  
+- **Email**: jipr@odoo.com  
+
+### 👤 Team Member 1  
+- **Name**: Jasmin Radadiya  
+- **Email**: jasminradadiya29@gmail.com  
+- **Phone**: 8320711810  
+
+### 👤 Team Member 2  
+- **Name**: Nakulkumar Rathod  
+- **Email**: nakulrathod8586@gmail.com  
+- **Phone**: 9081007646  
+
+### 👤 Team Member 3  
+- **Name**: Hiren Savaliya  
+- **Email**: hirenn158@gmail.com  
+- **Phone**: 9016954158  
+
+---
+
+## 📧 Collaborator Access  
+
+**📧 Email**: jipr@odoo.com
+
+---
 
 A web-based platform enabling individuals to offer their skills and request others' skills in return, encouraging a barter-based learning and service-sharing community.
 
@@ -50,62 +94,6 @@ skill-swap-platform/
 └── docs/                   # Documentation
 ```
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- MongoDB (local or cloud)
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd skill-swap-platform
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm run install:all
-   ```
-
-3. **Environment Setup**
-
-   Create `.env` files in both frontend and backend directories:
-
-   **Backend (.env)**
-   ```env
-   PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/skill-swap
-   JWT_SECRET=your-super-secret-jwt-key
-   NODE_ENV=development
-   ```
-
-   **Frontend (.env)**
-   ```env
-   VITE_API_URL=http://localhost:5000/api
-   VITE_APP_NAME=Skill Swap Platform
-   ```
-
-4. **Start the development servers**
-   ```bash
-   npm run dev
-   ```
-
-   This will start:
-   - Frontend: http://localhost:3000
-   - Backend: http://localhost:5000
-
-## 📋 Available Scripts
-
-- `npm run dev` - Start both frontend and backend in development mode
-- `npm run dev:frontend` - Start only frontend
-- `npm run dev:backend` - Start only backend
-- `npm run build` - Build both applications for production
-- `npm run test` - Run tests for both frontend and backend
-- `npm run install:all` - Install dependencies for all packages
 
 ## 🔐 Authentication
 
